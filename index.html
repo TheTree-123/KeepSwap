@@ -341,6 +341,18 @@
         import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, doc, getDoc, setDoc, updateDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
+        // STEP 3 SETUP: If you want to deploy on GitHub, set up your own free Firebase Project
+        // and paste your credentials object here instead of null:
+        const MY_CUSTOM_FIREBASE_CONFIG = {
+            apiKey: "AIzaSyC7nU8xlsfwlJxmiRjWYsVcuFAiQZ-H5dtQ",
+            authDomain: "keepswap-d3741.firebaseapp.com",
+            projectId: "keepswap-d3741",
+            storageBucket: "keepswap-d3741.firebasestorage.app",
+            messagingSenderId: "899656071537",
+            appId: "1:899656071537:web:234c98d4c87955a6981ed0",
+            measurementId: "G-HSGVRJJ4BB"
+        };
+
         // Environment Firebase constants
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'send-or-keep-default';
         const rawConfig = typeof __firebase_config !== 'undefined' ? __firebase_config : '{}';
