@@ -1,0 +1,1763 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Send or Keep - Interactive Simulator</title>
+    <!-- Tailwind CSS for modern styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome for card and menu iconography -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts (Inter) -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #0f172a; /* Slate 900 */
+        }
+        /* Custom scrollbar styling */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #1e293b;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #475569;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #64748b;
+        }
+        /* Animated Rainbow Wild effect */
+        @keyframes rainbowGlow {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+        .animate-rainbow {
+            background-size: 200% 200%;
+            animation: rainbowGlow 4s ease infinite;
+        }
+    </style>
+</head>
+<body class="text-slate-100 min-h-screen flex flex-col overflow-x-hidden">
+
+    <!-- Main Menu / Entry Screen -->
+    <div id="main-menu" class="fixed inset-0 z-50 bg-slate-950 flex flex-col items-center justify-center p-6 overflow-y-auto">
+        <div class="max-w-md w-full bg-slate-900 border border-slate-800 rounded-3xl p-8 shadow-2xl space-y-6 text-center">
+            <div class="inline-flex bg-gradient-to-tr from-violet-600 to-indigo-600 p-4 rounded-2xl text-white shadow-lg mb-2">
+                <i class="fa-solid fa-shuffle text-3xl"></i>
+            </div>
+            <div>
+                <h1 class="text-3xl font-extrabold tracking-tight bg-gradient-to-r from-violet-400 to-indigo-200 bg-clip-text text-transparent">SEND OR KEEP</h1>
+                <p class="text-sm text-slate-400 mt-1">Interactive Companion & Playtest Simulator</p>
+            </div>
+
+            <!-- Player Setup Input -->
+            <div class="space-y-2 text-left">
+                <label class="block text-xs font-bold uppercase tracking-wider text-slate-400">Your Username</label>
+                <input type="text" id="username-input" value="Player" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-slate-200 focus:outline-none focus:border-indigo-500 font-semibold" placeholder="Enter username...">
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="space-y-3 pt-2">
+                <button onclick="window.startLocalSoloGame()" class="w-full bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white font-bold py-3.5 px-4 rounded-xl transition shadow-lg shadow-indigo-600/25 flex items-center justify-center space-x-2">
+                    <i class="fa-solid fa-robot"></i>
+                    <span>Play Solo (With Bots)</span>
+                </button>
+
+                <div class="relative flex py-2 items-center">
+                    <div class="flex-grow border-t border-slate-800"></div>
+                    <span class="flex-shrink mx-4 text-xs font-bold uppercase tracking-widest text-slate-500">Or Online Lobby</span>
+                    <div class="flex-grow border-t border-slate-800"></div>
+                </div>
+
+                <button onclick="window.createOnlineLobby()" class="w-full bg-slate-800 hover:bg-slate-700 text-white border border-slate-700 font-bold py-3 px-4 rounded-xl transition flex items-center justify-center space-x-2">
+                    <i class="fa-solid fa-plus"></i>
+                    <span>Create New Lobby</span>
+                </button>
+
+                <div class="flex space-x-2">
+                    <input type="text" id="join-code-input" class="w-1/3 bg-slate-950 border border-slate-800 rounded-xl px-3 text-center text-slate-200 uppercase font-black tracking-widest focus:outline-none focus:border-indigo-500" placeholder="CODE" maxlength="4">
+                    <button onclick="window.joinOnlineLobby()" class="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 rounded-xl transition flex items-center justify-center space-x-2">
+                        <i class="fa-solid fa-right-to-bracket"></i>
+                        <span>Join Lobby</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Waiting Lobby Screen -->
+    <div id="lobby-room" class="hidden fixed inset-0 z-40 bg-slate-950 flex flex-col items-center justify-center p-6">
+        <div class="max-w-md w-full bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-2xl space-y-6">
+            <div class="flex justify-between items-center border-b border-slate-800 pb-4">
+                <div>
+                    <h3 class="text-xl font-bold">Game Lobby</h3>
+                    <p class="text-xs text-slate-400">Share code with friends to join</p>
+                </div>
+                <div class="bg-indigo-950/80 border border-indigo-800/50 px-4 py-2 rounded-xl text-center">
+                    <span class="block text-[9px] font-bold text-slate-400 uppercase tracking-wider">Room Code</span>
+                    <span id="lobby-code-display" class="text-xl font-black text-indigo-400 tracking-widest uppercase">----</span>
+                </div>
+            </div>
+
+            <!-- Player List -->
+            <div>
+                <h4 class="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3">Players Connected</h4>
+                <div id="lobby-player-list" class="space-y-2">
+                    <!-- Dynamic Lobby players -->
+                </div>
+            </div>
+
+            <!-- Lobby Options -->
+            <div id="lobby-controls" class="space-y-3 pt-2">
+                <div class="flex space-x-2">
+                    <button onclick="window.lobbyAddBot()" class="flex-1 bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold py-2.5 rounded-xl border border-slate-700 text-xs flex items-center justify-center space-x-1">
+                        <i class="fa-solid fa-robot"></i>
+                        <span>Add Bot</span>
+                    </button>
+                    <button onclick="window.lobbyRemoveBot()" class="flex-1 bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold py-2.5 rounded-xl border border-slate-700 text-xs flex items-center justify-center space-x-1">
+                        <i class="fa-solid fa-user-minus"></i>
+                        <span>Remove Bot</span>
+                    </button>
+                </div>
+                <button onclick="window.startOnlineGame()" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3.5 px-4 rounded-xl transition shadow-lg shadow-emerald-600/25 flex items-center justify-center space-x-2">
+                    <i class="fa-solid fa-play"></i>
+                    <span>Start Match</span>
+                </button>
+            </div>
+            
+            <button onclick="window.leaveLobby()" class="w-full bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-slate-200 py-2.5 rounded-xl text-xs font-semibold">
+                Leave Lobby & Exit
+            </button>
+        </div>
+    </div>
+
+    <!-- Top Navigation Header -->
+    <header class="bg-slate-900 border-b border-slate-800 px-6 py-4 flex items-center justify-between shadow-lg sticky top-0 z-30">
+        <div class="flex items-center space-x-3">
+            <button onclick="window.exitGameToMenu()" class="bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white p-2.5 rounded-xl transition text-sm">
+                <i class="fa-solid fa-arrow-left"></i>
+            </button>
+            <div>
+                <h1 class="text-xl font-extrabold tracking-tight bg-gradient-to-r from-violet-400 to-indigo-200 bg-clip-text text-transparent">SEND OR KEEP</h1>
+                <p id="game-subtitle" class="text-xs text-slate-400 font-medium">Local Session</p>
+            </div>
+        </div>
+        
+        <!-- Score Target Tracker -->
+        <div class="flex items-center space-x-4">
+            <div class="bg-slate-800/80 px-4 py-2 rounded-xl border border-slate-700/50 flex items-center space-x-2">
+                <span class="text-xs text-slate-400 font-semibold uppercase tracking-wider">Goal:</span>
+                <span class="text-sm font-bold text-amber-400">50 Points to Win</span>
+            </div>
+            <button onclick="window.toggleSettingsModal(true)" class="bg-slate-800 hover:bg-slate-700 transition px-3.5 py-2 rounded-xl border border-slate-700 text-slate-300 hover:text-white flex items-center space-x-1.5 text-sm">
+                <i class="fa-solid fa-cog"></i>
+                <span>Settings</span>
+            </button>
+        </div>
+    </header>
+
+    <main class="flex-1 max-w-7xl w-full mx-auto p-4 lg:p-6 grid grid-cols-1 lg:grid-cols-4 gap-6">
+        
+        <!-- Left Column: Scoreboard, Interval Tracker & Log Feed -->
+        <div class="lg:col-span-1 flex flex-col space-y-6">
+            <!-- Score & Player List -->
+            <div class="bg-slate-900/90 border border-slate-800 rounded-2xl p-5 shadow-xl">
+                <h2 class="text-sm font-bold uppercase tracking-wider text-slate-400 mb-4 flex items-center justify-between">
+                    <span>Players & Seats</span>
+                    <span id="player-count-badge" class="bg-indigo-950/80 text-indigo-400 text-xs px-2.5 py-0.5 rounded-full border border-indigo-800/50">3 Players</span>
+                </h2>
+                <div id="player-scoreboard" class="space-y-3">
+                    <!-- Dynamic scoreboard seats -->
+                </div>
+            </div>
+
+            <!-- Current Phase / Game Progress Panel -->
+            <div class="bg-slate-900/90 border border-slate-800 rounded-2xl p-5 shadow-xl flex flex-col justify-between">
+                <div>
+                    <h3 class="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3">Round Progress</h3>
+                    <div class="flex items-center justify-between mb-4">
+                        <span id="display-round" class="text-lg font-black text-slate-200">Round 1</span>
+                        <span id="display-interval" class="bg-emerald-950/80 text-emerald-400 border border-emerald-800/60 text-xs font-bold px-3 py-1 rounded-full">Interval 1/5</span>
+                    </div>
+                    <!-- 5-Interval Progress Beads -->
+                    <div class="flex items-center space-x-2 mb-4">
+                        <div id="bead-1" class="h-2.5 flex-1 rounded-full bg-slate-800 border border-slate-700 transition-colors"></div>
+                        <div id="bead-2" class="h-2.5 flex-1 rounded-full bg-slate-800 border border-slate-700 transition-colors"></div>
+                        <div id="bead-3" class="h-2.5 flex-1 rounded-full bg-slate-800 border border-slate-700 transition-colors"></div>
+                        <div id="bead-4" class="h-2.5 flex-1 rounded-full bg-slate-800 border border-slate-700 transition-colors"></div>
+                        <div id="bead-5" class="h-2.5 flex-1 rounded-full bg-slate-800 border border-slate-700 transition-colors"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Game Live Activity Feed Log -->
+            <div class="bg-slate-900/90 border border-slate-800 rounded-2xl p-5 shadow-xl flex-1 flex flex-col min-h-[220px]">
+                <h3 class="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3 flex items-center space-x-2">
+                    <i class="fa-solid fa-clipboard-list text-slate-500"></i>
+                    <span>Live Match Activity</span>
+                </h3>
+                <div id="log-feed" class="flex-1 overflow-y-auto space-y-2 text-xs text-slate-300 max-h-[280px] pr-1">
+                    <!-- Logs dynamically populate -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Right 3-Columns: Main Game Workspace, Player Hand & Interactive Actions -->
+        <div class="lg:col-span-3 flex flex-col space-y-6">
+            
+            <!-- The Board / Interaction Stage Arena -->
+            <div id="board-arena" class="bg-slate-900 border border-slate-800 rounded-3xl p-6 min-h-[380px] flex flex-col justify-between shadow-2xl relative overflow-hidden">
+                <!-- Background ambient glow grid -->
+                <div class="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(99,102,241,0.08),transparent_40%)] pointer-events-none"></div>
+                
+                <!-- Stage Header -->
+                <div class="relative z-10 flex items-center justify-between border-b border-slate-800/80 pb-4 mb-4">
+                    <div class="flex items-center space-x-2.5">
+                        <span id="stage-badge" class="bg-violet-950 text-violet-400 border border-violet-800 text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full">Step 1: Draft Choice</span>
+                        <h3 id="stage-title" class="text-sm font-bold text-slate-200">Draw a card and choose whether to Keep or Send.</h3>
+                    </div>
+                    <div class="text-xs text-slate-400">
+                        Deck: <span id="deck-count" class="font-extrabold text-slate-200 text-sm">58</span> left
+                    </div>
+                </div>
+
+                <!-- Interactive Stage Body (Changes dynamically based on phase) -->
+                <div id="stage-body" class="relative z-10 flex-1 flex flex-col items-center justify-center py-6">
+                    <!-- Content injected via javascript based on game Phase -->
+                </div>
+
+                <!-- Stage Footer / Action prompt bar -->
+                <div id="stage-footer" class="relative z-10 border-t border-slate-800/80 pt-4 mt-4 flex justify-between items-center text-xs text-slate-400">
+                    <div>
+                        <span class="font-semibold text-slate-300">Rules Reminder:</span> Hand limit is strict 7 cards. Maximum of 2 cards carried over.
+                    </div>
+                    <div id="cheat-peek-indicator" class="hidden text-amber-500 font-semibold">
+                        <i class="fa-solid fa-eye mr-1"></i> Cheat Mode Active
+                    </div>
+                </div>
+            </div>
+
+            <!-- Player Private Hand Section -->
+            <div class="bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-2xl">
+                <div class="flex items-center justify-between mb-4">
+                    <div class="flex items-center space-x-2">
+                        <div class="h-3 w-3 rounded-full bg-indigo-500 animate-pulse"></div>
+                        <h2 class="text-lg font-bold tracking-tight text-slate-100">Your Hand (<span id="hand-count">0</span>/7)</h2>
+                    </div>
+                    <span class="text-xs text-slate-400 font-medium">Select a card below to trigger actions if permitted.</span>
+                </div>
+
+                <!-- Hand Area Container -->
+                <div id="player-hand" class="flex flex-wrap gap-4 items-center justify-center min-h-[160px] bg-slate-950/50 rounded-2xl p-4 border border-slate-800/60">
+                    <!-- Player cards will render dynamically -->
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Custom Overlay: Settings Panel -->
+    <div id="settings-modal" class="hidden fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-slate-900 border border-slate-800 w-full max-w-md rounded-2xl p-6 shadow-2xl relative animate-in fade-in zoom-in duration-200">
+            <h3 class="text-lg font-bold text-slate-100 mb-4 flex items-center space-x-2">
+                <i class="fa-solid fa-cog text-slate-400"></i>
+                <span>Prototype Settings</span>
+            </h3>
+            
+            <div class="space-y-4 mb-6">
+                <!-- Player Count Selection (Local Only) -->
+                <div id="local-player-select-wrapper">
+                    <label class="block text-xs font-bold uppercase text-slate-400 mb-2">Total Players (Local Play)</label>
+                    <div class="grid grid-cols-4 gap-2">
+                        <button onclick="window.setPlayerCount(2)" id="btn-player-2" class="py-2 rounded-xl text-sm font-bold border transition bg-slate-800 hover:bg-slate-700 text-slate-200 border-slate-700">2 Players</button>
+                        <button onclick="window.setPlayerCount(3)" id="btn-player-3" class="py-2 rounded-xl text-sm font-bold border transition bg-indigo-600 border-indigo-500 text-white shadow-lg shadow-indigo-600/20">3 Players</button>
+                        <button onclick="window.setPlayerCount(4)" id="btn-player-4" class="py-2 rounded-xl text-sm font-bold border transition bg-slate-800 hover:bg-slate-700 text-slate-200 border-slate-700">4 Players</button>
+                        <button onclick="window.setPlayerCount(5)" id="btn-player-5" class="py-2 rounded-xl text-sm font-bold border transition bg-slate-800 hover:bg-slate-700 text-slate-200 border-slate-700">5 Players</button>
+                    </div>
+                </div>
+
+                <!-- Peek Cheat Mode -->
+                <div class="flex items-center justify-between py-3 border-t border-slate-800">
+                    <div>
+                        <span class="block text-sm font-bold text-slate-200">Cheat Mode (Peek Opponent Hands)</span>
+                        <span class="block text-xs text-slate-400">Reveal all opponent secret cards for testing.</span>
+                    </div>
+                    <label class="relative inline-flex items-center cursor-pointer">
+                        <input type="checkbox" id="cheat-toggle" class="sr-only peer" onchange="window.toggleCheatMode(this.checked)">
+                        <div class="w-11 h-6 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
+                    </label>
+                </div>
+            </div>
+
+            <button onclick="window.toggleSettingsModal(false)" class="w-full bg-slate-800 hover:bg-slate-700 text-slate-200 transition py-2.5 rounded-xl text-sm font-bold border border-slate-700">
+                Save & Close
+            </button>
+        </div>
+    </div>
+
+    <!-- Custom Overlay: Target Selector (For Action Cards) -->
+    <div id="target-modal" class="hidden fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-slate-900 border border-slate-800 w-full max-w-sm rounded-2xl p-6 shadow-2xl relative">
+            <h3 class="text-lg font-bold text-slate-100 mb-2 flex items-center space-x-2">
+                <i class="fa-solid fa-crosshairs text-rose-500"></i>
+                <span>Choose Target</span>
+            </h3>
+            <p id="target-instructions" class="text-xs text-slate-400 mb-4">Select an opponent to execute your play action against.</p>
+            
+            <div id="target-choices" class="space-y-2 mb-6">
+                <!-- Target buttons dynamically generated -->
+            </div>
+            
+            <button onclick="window.cancelTargetSelection()" class="w-full bg-slate-800 hover:bg-slate-700 text-slate-300 transition py-2.5 rounded-xl text-sm font-bold border border-slate-700">
+                Cancel
+            </button>
+        </div>
+    </div>
+
+    <!-- Custom Overlay: Discard Overflow Prompt (Strict 7-Card Hand Limit) -->
+    <div id="discard-overflow-modal" class="hidden fixed inset-0 z-50 bg-slate-950/90 backdrop-blur-md flex items-center justify-center p-4">
+        <div class="bg-slate-900 border-2 border-amber-600/60 w-full max-w-lg rounded-3xl p-6 shadow-2xl relative text-center">
+            <div class="mx-auto w-12 h-12 bg-amber-500/10 text-amber-500 border border-amber-500/30 rounded-full flex items-center justify-center text-xl mb-4">
+                <i class="fa-solid fa-triangle-exclamation"></i>
+            </div>
+            <h3 class="text-xl font-extrabold text-slate-100 mb-2">Discard Warning: Hand Limit Over!</h3>
+            <p class="text-sm text-slate-400 mb-6">You currently hold <span class="text-amber-400 font-bold" id="overflow-count">8</span> cards. Choose exactly <span class="text-rose-500 font-bold">1 card</span> from your hand below to discard permanently and bring your hand count back down to 7.</p>
+            
+            <div id="overflow-hand-choices" class="flex flex-wrap gap-3 items-center justify-center p-4 bg-slate-950/60 rounded-2xl border border-slate-800 mb-6">
+                <!-- Injected cards options to drop -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Custom Toast / Banner Notifications system -->
+    <div id="toast-container" class="fixed bottom-6 right-6 z-50 space-y-2 pointer-events-none"></div>
+
+    <!-- FIREBASE MODULE INTEGRATION -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, getDoc, setDoc, updateDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // Environment Firebase constants
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'send-or-keep-default';
+        const rawConfig = typeof __firebase_config !== 'undefined' ? __firebase_config : '{}';
+        
+        let firebaseApp, db, auth;
+        let isOnlineMode = false;
+        let onlineLobbyId = null;
+        let myUserId = "local-player";
+        let isHost = false;
+        let firestoreUnsubscribe = null;
+
+        // Try initializing Firebase
+        try {
+            if (rawConfig && rawConfig !== '{}') {
+                const firebaseConfig = JSON.parse(rawConfig);
+                firebaseApp = initializeApp(firebaseConfig);
+                db = getFirestore(firebaseApp);
+                auth = getAuth(firebaseApp);
+                
+                // Auth anonymously
+                const initialToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : undefined;
+                if (initialToken) {
+                    signInWithCustomToken(auth, initialToken).then((cred) => {
+                        myUserId = cred.user.uid;
+                    });
+                } else {
+                    signInAnonymously(auth).then((cred) => {
+                        myUserId = cred.user.uid;
+                    });
+                }
+            }
+        } catch (e) {
+            console.warn("Firebase config not found or invalid. Falling back fully to Offline Local Play.", e);
+        }
+
+        // Card Deck & Play Elements configurations
+        const ELEMENTS_CONFIG = {
+            Temp: { color: "from-blue-500 to-red-500 animate-pulse", text: "text-blue-400", action: "Skip: Next player skips action phase." },
+            Earth: { color: "from-emerald-700 to-amber-900", text: "text-emerald-400", action: "Bury: Discard any card, draw a replacement." },
+            Vanity: { color: "from-pink-500 to-purple-600", text: "text-pink-400", action: "Peek: Secretly view an opponent's entire hand." },
+            Elec: { color: "from-yellow-400 to-amber-500", text: "text-yellow-400", action: "Force Draw: Push opponent closer to limit." },
+            Metal: { color: "from-slate-400 to-zinc-500", text: "text-slate-300", action: "Shield: Play instantly to block a card attack." },
+            Food: { color: "from-orange-500 to-amber-600", text: "text-orange-400", action: "Feast: Draw 2; keep one, send the other." },
+            Water: { color: "from-cyan-500 to-blue-600", text: "text-cyan-400", action: "Flush: Force opponent to discard highest card." },
+            Plastic: { color: "from-teal-400 to-emerald-600", text: "text-teal-400", action: "Swap: Exchange entire hand with theirs." },
+            Crime: { color: "from-red-600 to-rose-800", text: "text-rose-400", action: "Steal: Pull 1 random card from enemy hand." },
+            Rainbow: { color: "animate-rainbow bg-gradient-to-r from-red-500 via-yellow-400 via-green-500 via-blue-500 to-purple-500 border-yellow-300 border-2", text: "text-amber-300", action: "Rainbow Mimic: Copy active effects." }
+        };
+
+        const BOT_NAMES = ["Apex-Bot", "Saber-Bot", "Nexus-Bot", "Cipher-Bot"];
+        
+        // Comprehensive reactive gameState state object (Unified Local + Online representation)
+        let gameState = {
+            round: 1,
+            interval: 1,
+            players: [],
+            deck: [],
+            discardPile: [],
+            playerCount: 3,
+            phase: 'draft', // 'draft', 'draft_switch', 'action', 'discard_overflow', 'showdown', 'ended'
+            cheatMode: false,
+            drawnCard: null, 
+            selectedShowdownCards: [] 
+        };
+
+        let actionTargetContext = null;
+
+        // Custom Deck Builder
+        function buildDeck() {
+            let tempDeck = [];
+            const elements = ['Temp', 'Earth', 'Vanity', 'Elec', 'Metal', 'Food', 'Water', 'Plastic', 'Crime'];
+            
+            elements.forEach(el => {
+                for (let num = 1; num <= 5; num++) {
+                    tempDeck.push({
+                        id: `${el}_${num}`,
+                        element: el,
+                        type: 'number',
+                        value: num,
+                        text: `${el} ${num}`
+                    });
+                }
+                tempDeck.push({
+                    id: `${el}_action`,
+                    element: el,
+                    type: 'action',
+                    value: 0,
+                    text: `${el} Action`
+                });
+            });
+
+            // Insert 4 Special Rainbow Wild cards
+            for (let i = 1; i <= 4; i++) {
+                tempDeck.push({
+                    id: `Rainbow_${i}`,
+                    element: 'Rainbow',
+                    type: 'wild',
+                    value: 0,
+                    text: `Rainbow Wild`
+                });
+            }
+
+            // Shuffle
+            for (let i = tempDeck.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [tempDeck[i], tempDeck[j]] = [tempDeck[j], tempDeck[i]];
+            }
+            return tempDeck;
+        }
+
+        // Custom Notification Toasts
+        function createToast(message, type = 'info') {
+            const container = document.getElementById('toast-container');
+            if (!container) return;
+            const toast = document.createElement('div');
+            
+            const bgClass = {
+                'success': 'bg-emerald-950 text-emerald-300 border-emerald-800',
+                'error': 'bg-rose-950 text-rose-300 border-rose-800',
+                'warning': 'bg-amber-950 text-amber-300 border-amber-800',
+                'info': 'bg-slate-900 text-slate-100 border-slate-700'
+            }[type];
+
+            toast.className = `${bgClass} border px-4 py-3 rounded-xl shadow-xl flex items-center space-x-3 text-xs font-semibold max-w-sm border-l-4`;
+            
+            let icon = 'fa-info-circle';
+            if (type === 'success') icon = 'fa-circle-check';
+            if (type === 'error') icon = 'fa-skull-crossbones';
+            if (type === 'warning') icon = 'fa-triangle-exclamation';
+
+            toast.innerHTML = `<i class="fa-solid ${icon} text-lg"></i> <span>${message}</span>`;
+            container.appendChild(toast);
+            
+            setTimeout(() => {
+                toast.classList.add('opacity-0', 'transition', 'duration-500');
+                setTimeout(() => toast.remove(), 500);
+            }, 4000);
+        }
+
+        function logAction(msg, type = "info") {
+            const feed = document.getElementById('log-feed');
+            if (!feed) return;
+            const entry = document.createElement('div');
+            
+            const colorClass = {
+                'success': 'text-emerald-400',
+                'error': 'text-rose-400',
+                'warning': 'text-amber-400',
+                'info': 'text-indigo-300'
+            }[type];
+
+            entry.className = `p-1 border-b border-slate-800/40 ${colorClass}`;
+            entry.innerHTML = `<strong>[Int ${gameState.interval}]</strong> ${msg}`;
+            feed.appendChild(entry);
+            feed.scrollTop = feed.scrollHeight;
+        }
+
+        function getCardMarkup(card, index = -1, clickable = false, customClasses = '') {
+            const config = ELEMENTS_CONFIG[card.element] || { color: "from-slate-700 to-slate-800", text: "text-slate-400" };
+            let typeLabel = card.type.toUpperCase();
+            let valueText = card.value > 0 ? card.value : '★';
+            
+            let actionMarkup = '';
+            if (card.type === 'action') {
+                actionMarkup = `<div class="text-[9px] mt-1 text-slate-200 uppercase tracking-widest text-center truncate font-black bg-black/40 px-1 py-0.5 rounded">${card.element} Action</div>`;
+            } else if (card.type === 'wild') {
+                actionMarkup = `<div class="text-[9px] mt-1 text-yellow-300 uppercase tracking-widest text-center font-black bg-black/40 px-1 py-0.5 rounded">Rainbow Action</div>`;
+            }
+
+            return `
+                <div class="relative w-28 h-40 rounded-2xl bg-gradient-to-b ${config.color} p-2.5 flex flex-col justify-between border border-white/10 shadow-lg select-none transition duration-200 transform hover:scale-105 active:scale-95 ${clickable ? 'cursor-pointer hover:border-white/30' : ''} ${customClasses}"
+                     ${index !== -1 ? `onclick="window.handleCardSelect(${index})"` : ''}>
+                    <div class="flex items-center justify-between">
+                        <span class="text-xs font-black bg-black/25 px-1.5 py-0.5 rounded text-white">${valueText}</span>
+                        <i class="fa-solid fa-layer-group text-[10px] text-white/50"></i>
+                    </div>
+                    <div class="flex flex-col items-center justify-center text-center my-1">
+                        <span class="text-xs font-black text-white tracking-wide uppercase drop-shadow-md truncate w-full">${card.element}</span>
+                        ${actionMarkup}
+                    </div>
+                    <div class="flex items-center justify-between text-[10px] text-white/60">
+                        <span>#${card.id.split('_')[1] || 'S'}</span>
+                        <span class="text-[8px] tracking-widest bg-white/10 px-1 rounded-full uppercase">${typeLabel}</span>
+                    </div>
+                </div>
+            `;
+        }
+
+        function evaluateShowdownScores(cards) {
+            const elementCounts = {};
+            const numCounts = {};
+            const numValues = [];
+            let wildCount = 0;
+
+            cards.forEach(c => {
+                if (c.element === 'Rainbow') {
+                    wildCount++;
+                } else {
+                    elementCounts[c.element] = (elementCounts[c.element] || 0) + 1;
+                }
+                if (c.value > 0) {
+                    numCounts[c.value] = (numCounts[c.value] || 0) + 1;
+                    numValues.push(c.value);
+                }
+            });
+
+            if (wildCount >= 3) {
+                return { points: 30, handName: "PRISM FUSION (Jackpot!)" };
+            }
+
+            let isFlush = false;
+            let flushElement = "";
+            for (const [el, count] of Object.entries(elementCounts)) {
+                if (count + wildCount >= 5) {
+                    isFlush = true;
+                    flushElement = el;
+                    break;
+                }
+            }
+
+            let sortedUnique = [...new Set(numValues)].sort();
+            let missing = 0;
+            for (let i = 1; i <= 5; i++) {
+                if (!numValues.includes(i)) {
+                    missing++;
+                }
+            }
+            let isStraight = (missing <= wildCount);
+
+            let maxOfAKind = 0;
+            let pairCount = 0;
+            let valuesAnalyzed = Object.values(numCounts);
+            
+            valuesAnalyzed.forEach(val => {
+                if (val === 2) pairCount++;
+            });
+
+            let numMatchesWithWilds = Math.max(0, ...valuesAnalyzed) + wildCount;
+
+            if (numMatchesWithWilds >= 4) {
+                return { points: 15, handName: "FOUR OF A KIND" };
+            }
+            if ((numMatchesWithWilds === 3 && pairCount >= 1) || (pairCount >= 2 && wildCount > 0)) {
+                return { points: 15, handName: "FULL HOUSE" };
+            }
+            if (isStraight) {
+                return { points: 10, handName: "STRAIGHT (1-5)" };
+            }
+            if (isFlush) {
+                return { points: 10, handName: `${flushElement.toUpperCase()} FLUSH` };
+            }
+            if (numMatchesWithWilds === 3) {
+                return { points: 5, handName: "THREE OF A KIND" };
+            }
+            if (pairCount >= 2 || (pairCount === 1 && wildCount > 0)) {
+                return { points: 5, handName: "TWO PAIR" };
+            }
+            if (pairCount === 1 || wildCount > 0) {
+                return { points: 2, handName: "ONE PAIR" };
+            }
+
+            return { points: 0, handName: "HIGH CARD (0 pts)" };
+        }
+
+        // Main Lobby Navigation Handlers
+        window.startLocalSoloGame = function() {
+            isOnlineMode = false;
+            document.getElementById('main-menu').classList.add('hidden');
+            document.getElementById('local-player-select-wrapper').classList.remove('hidden');
+            document.getElementById('game-subtitle').textContent = "Local Solo Session";
+            
+            // Set up player profile name
+            const nameInput = document.getElementById('username-input').value || "Player";
+            gameState.players = [
+                { id: myUserId, name: nameInput, isHuman: true, score: 0, hand: [], carryOver: [] }
+            ];
+            
+            window.resetFullGame();
+        };
+
+        window.exitGameToMenu = function() {
+            if (firestoreUnsubscribe) {
+                firestoreUnsubscribe();
+            }
+            isOnlineMode = false;
+            onlineLobbyId = null;
+            document.getElementById('main-menu').classList.remove('hidden');
+            document.getElementById('lobby-room').classList.add('hidden');
+        };
+
+        // Firestore online room utilities
+        window.createOnlineLobby = async function() {
+            if (!db) {
+                createToast("Firebase database is unconfigured. Online play is unavailable.", "error");
+                return;
+            }
+            
+            isOnlineMode = true;
+            isHost = true;
+            const lobbyId = Math.random().toString(36).substring(2, 6).toUpperCase();
+            onlineLobbyId = lobbyId;
+            const username = document.getElementById('username-input').value || "Host";
+
+            const lobbyRef = doc(db, 'artifacts', appId, 'public', 'data', 'lobbies', lobbyId);
+            const initialLobbyDoc = {
+                id: lobbyId,
+                hostId: myUserId,
+                status: 'lobby',
+                players: [{ id: myUserId, name: username, isHuman: true, score: 0, hand: [], isReady: false, isSkipped: false }],
+                gameState: {
+                    round: 1,
+                    interval: 1,
+                    phase: 'draft',
+                    deck: [],
+                    discardPile: [],
+                    playerCount: 1,
+                    currentPlayerIndex: 0,
+                    drawnCard: null
+                },
+                logs: [`Lobby created by ${username}`]
+            };
+
+            await setDoc(lobbyRef, initialLobbyDoc);
+            
+            document.getElementById('local-player-select-wrapper').classList.add('hidden');
+            document.getElementById('lobby-code-display').textContent = lobbyId;
+            document.getElementById('lobby-room').classList.remove('hidden');
+            document.getElementById('main-menu').classList.add('hidden');
+            document.getElementById('game-subtitle').textContent = `Online Room: ${lobbyId}`;
+            
+            window.subscribeToLobby(lobbyId);
+        };
+
+        window.joinOnlineLobby = async function() {
+            if (!db) {
+                createToast("Firebase database is unconfigured. Online play is unavailable.", "error");
+                return;
+            }
+
+            const code = document.getElementById('join-code-input').value.trim().toUpperCase();
+            if (code.length !== 4) {
+                createToast("Lobby code must be exactly 4 characters.", "warning");
+                return;
+            }
+
+            const username = document.getElementById('username-input').value || "Guest";
+            const lobbyRef = doc(db, 'artifacts', appId, 'public', 'data', 'lobbies', code);
+            const docSnap = await getDoc(lobbyRef);
+
+            if (!docSnap.exists()) {
+                createToast("Lobby code not found. Please try again.", "error");
+                return;
+            }
+
+            const lobbyData = docSnap.data();
+            if (lobbyData.status !== 'lobby') {
+                createToast("This lobby has already started the match.", "error");
+                return;
+            }
+
+            if (lobbyData.players.length >= 5) {
+                createToast("This lobby is full (max 5 players).", "error");
+                return;
+            }
+
+            isOnlineMode = true;
+            isHost = false;
+            onlineLobbyId = code;
+
+            const updatedPlayers = [...lobbyData.players, { id: myUserId, name: username, isHuman: true, score: 0, hand: [], isReady: false, isSkipped: false }];
+            const updatedLogs = [...lobbyData.logs, `${username} joined the lobby.`];
+            
+            await updateDoc(lobbyRef, { 
+                players: updatedPlayers,
+                logs: updatedLogs
+            });
+
+            document.getElementById('local-player-select-wrapper').classList.add('hidden');
+            document.getElementById('lobby-code-display').textContent = code;
+            document.getElementById('lobby-room').classList.remove('hidden');
+            document.getElementById('main-menu').classList.add('hidden');
+            document.getElementById('game-subtitle').textContent = `Online Room: ${code}`;
+            
+            window.subscribeToLobby(code);
+        };
+
+        window.subscribeToLobby = function(lobbyId) {
+            if (firestoreUnsubscribe) firestoreUnsubscribe();
+
+            const lobbyRef = doc(db, 'artifacts', appId, 'public', 'data', 'lobbies', lobbyId);
+            firestoreUnsubscribe = onSnapshot(lobbyRef, (docSnap) => {
+                if (!docSnap.exists()) return;
+                
+                const data = docSnap.data();
+                
+                // Keep tracks of players
+                const lobbyPlayersDiv = document.getElementById('lobby-player-list');
+                lobbyPlayersDiv.innerHTML = data.players.map(p => `
+                    <div class="p-3 bg-slate-950/60 rounded-xl border border-slate-800 flex items-center justify-between">
+                        <span class="text-sm font-semibold">${p.name} ${p.isHuman ? '' : '(BOT)'}</span>
+                        <span class="text-xs text-indigo-400 font-bold">${p.id === data.hostId ? 'Host' : 'Ready'}</span>
+                    </div>
+                `).join('');
+
+                // Toggle host control panels
+                const controls = document.getElementById('lobby-controls');
+                if (myUserId === data.hostId) {
+                    controls.classList.remove('hidden');
+                } else {
+                    controls.classList.add('hidden');
+                }
+
+                // If game is launched
+                if (data.status === 'playing' && document.getElementById('lobby-room').classList.contains('hidden') === false) {
+                    document.getElementById('lobby-room').classList.add('hidden');
+                    createToast("The host has started the match!", "success");
+                }
+
+                // Map game state
+                gameState.players = data.players;
+                gameState.deck = data.gameState.deck;
+                gameState.discardPile = data.gameState.discardPile;
+                gameState.playerCount = data.players.length;
+                gameState.phase = data.gameState.phase;
+                gameState.round = data.gameState.round;
+                gameState.interval = data.gameState.interval;
+                gameState.currentPlayerIndex = data.gameState.currentPlayerIndex;
+                gameState.drawnCard = data.gameState.drawnCard;
+
+                // Sync live logs
+                const feed = document.getElementById('log-feed');
+                if (feed) {
+                    feed.innerHTML = data.logs.map((logLine, idx) => `
+                        <div class="p-1 border-b border-slate-800/40 text-indigo-300">
+                            <strong>[Event]</strong> ${logLine}
+                        </div>
+                    `).join('');
+                }
+
+                window.updateUI();
+            }, (err) => {
+                console.error("Firestore sync error:", err);
+            });
+        };
+
+        window.leaveLobby = async function() {
+            if (!onlineLobbyId) return;
+            const lobbyRef = doc(db, 'artifacts', appId, 'public', 'data', 'lobbies', onlineLobbyId);
+            const docSnap = await getDoc(lobbyRef);
+            
+            if (docSnap.exists()) {
+                const lobbyData = docSnap.data();
+                const filteredPlayers = lobbyData.players.filter(p => p.id !== myUserId);
+                await updateDoc(lobbyRef, {
+                    players: filteredPlayers,
+                    logs: [...lobbyData.logs, `A player has left the lobby.`]
+                });
+            }
+
+            window.exitGameToMenu();
+        };
+
+        window.lobbyAddBot = async function() {
+            if (!onlineLobbyId) return;
+            const lobbyRef = doc(db, 'artifacts', appId, 'public', 'data', 'lobbies', onlineLobbyId);
+            const docSnap = await getDoc(lobbyRef);
+
+            if (docSnap.exists()) {
+                const lobbyData = docSnap.data();
+                if (lobbyData.players.length >= 5) {
+                    createToast("Lobby is full. Max players is 5.", "warning");
+                    return;
+                }
+                const botName = BOT_NAMES[Math.floor(Math.random() * BOT_NAMES.length)] + `-${lobbyData.players.length}`;
+                const newBot = { id: `bot-${Date.now()}`, name: botName, isHuman: false, score: 0, hand: [], isReady: true, isSkipped: false };
+                
+                await updateDoc(lobbyRef, {
+                    players: [...lobbyData.players, newBot],
+                    logs: [...lobbyData.logs, `${botName} (AI) was added by host.`]
+                });
+            }
+        };
+
+        window.lobbyRemoveBot = async function() {
+            if (!onlineLobbyId) return;
+            const lobbyRef = doc(db, 'artifacts', appId, 'public', 'data', 'lobbies', onlineLobbyId);
+            const docSnap = await getDoc(lobbyRef);
+
+            if (docSnap.exists()) {
+                const lobbyData = docSnap.data();
+                const bots = lobbyData.players.filter(p => !p.isHuman);
+                if (bots.length === 0) {
+                    createToast("No bots in lobby to remove.", "warning");
+                    return;
+                }
+                const botToRemove = bots[bots.length - 1];
+                const filtered = lobbyData.players.filter(p => p.id !== botToRemove.id);
+
+                await updateDoc(lobbyRef, {
+                    players: filtered,
+                    logs: [...lobbyData.logs, `${botToRemove.name} (AI) removed.`]
+                });
+            }
+        };
+
+        window.startOnlineGame = async function() {
+            if (!onlineLobbyId) return;
+            const lobbyRef = doc(db, 'artifacts', appId, 'public', 'data', 'lobbies', onlineLobbyId);
+            
+            // Build fresh deck & distribute
+            const freshDeck = buildDeck();
+            const docSnap = await getDoc(lobbyRef);
+            
+            if (docSnap.exists()) {
+                const lobbyData = docSnap.data();
+                const playersCopy = JSON.parse(JSON.stringify(lobbyData.players));
+                
+                playersCopy.forEach(p => {
+                    p.hand = [freshDeck.pop(), freshDeck.pop()];
+                });
+
+                await updateDoc(lobbyRef, {
+                    status: 'playing',
+                    players: playersCopy,
+                    gameState: {
+                        round: 1,
+                        interval: 1,
+                        phase: 'draft',
+                        deck: freshDeck,
+                        discardPile: [],
+                        playerCount: playersCopy.length,
+                        currentPlayerIndex: 0,
+                        drawnCard: null
+                    },
+                    logs: [...lobbyData.logs, "The game has started! Starting cards distributed."]
+                });
+            }
+        };
+
+        window.setPlayerCount = function(count) {
+            gameState.playerCount = count;
+            document.getElementById('player-count-badge').textContent = `${count} Players`;
+            
+            for (let i = 2; i <= 5; i++) {
+                const btn = document.getElementById(`btn-player-${i}`);
+                if (i === count) {
+                    btn.className = "py-2 rounded-xl text-sm font-bold border transition bg-indigo-600 border-indigo-500 text-white shadow-lg shadow-indigo-600/20";
+                } else {
+                    btn.className = "py-2 rounded-xl text-sm font-bold border transition bg-slate-800 hover:bg-slate-700 text-slate-200 border-slate-700";
+                }
+            }
+            window.resetFullGame();
+        };
+
+        window.toggleSettingsModal = function(show) {
+            const modal = document.getElementById('settings-modal');
+            modal.classList.toggle('hidden', !show);
+        };
+
+        window.toggleCheatMode = function(checked) {
+            gameState.cheatMode = checked;
+            document.getElementById('cheat-peek-indicator').classList.toggle('hidden', !checked);
+            window.updateUI();
+            logAction(`Cheat Mode (Peek Hands) toggled ${checked ? 'ON' : 'OFF'}.`, 'warning');
+        };
+
+        window.resetFullGame = function() {
+            if (isOnlineMode) return; // Managed online
+
+            gameState.round = 1;
+            gameState.interval = 1;
+            gameState.deck = buildDeck();
+            gameState.discardPile = [];
+            gameState.phase = 'draft';
+            gameState.currentPlayerIndex = 0;
+            gameState.drawnCard = null;
+            gameState.selectedShowdownCards = [];
+
+            const pName = document.getElementById('username-input').value || "You (Human)";
+            gameState.players = [
+                { id: myUserId, name: pName, isHuman: true, score: 0, hand: [], carryOver: [] }
+            ];
+
+            for (let i = 0; i < gameState.playerCount - 1; i++) {
+                gameState.players.push({
+                    id: `bot-${i + 1}`,
+                    name: BOT_NAMES[i],
+                    isHuman: false,
+                    score: 0,
+                    hand: [],
+                    carryOver: []
+                });
+            }
+
+            gameState.players.forEach(p => {
+                p.hand = [gameState.deck.pop(), gameState.deck.pop()];
+            });
+
+            document.getElementById('log-feed').innerHTML = '';
+            logAction("Starting local session with bots!", "success");
+            window.updateUI();
+        };
+
+        window.startNextRound = async function() {
+            if (isOnlineMode) {
+                const lobbyRef = doc(db, 'artifacts', appId, 'public', 'data', 'lobbies', onlineLobbyId);
+                const freshDeck = buildDeck();
+                const playersCopy = JSON.parse(JSON.stringify(gameState.players));
+
+                playersCopy.forEach(p => {
+                    let currentHandCount = p.hand.length;
+                    let needed = 2 - currentHandCount;
+                    for (let i = 0; i < needed; i++) {
+                        p.hand.push(freshDeck.pop());
+                    }
+                });
+
+                await updateDoc(lobbyRef, {
+                    players: playersCopy,
+                    gameState: {
+                        round: gameState.round + 1,
+                        interval: 1,
+                        phase: 'draft',
+                        deck: freshDeck,
+                        discardPile: [],
+                        playerCount: playersCopy.length,
+                        currentPlayerIndex: 0,
+                        drawnCard: null
+                    },
+                    logs: [...gameState.players.map(p => `${p.name} carries over hand into round ${gameState.round + 1}`)]
+                });
+                return;
+            }
+
+            gameState.round++;
+            gameState.interval = 1;
+            gameState.deck = buildDeck();
+            gameState.discardPile = [];
+            gameState.phase = 'draft';
+            gameState.currentPlayerIndex = 0;
+            gameState.drawnCard = null;
+            gameState.selectedShowdownCards = [];
+
+            gameState.players.forEach(p => {
+                let currentHandCount = p.hand.length;
+                let needed = 2 - currentHandCount;
+                for (let i = 0; i < needed; i++) {
+                    p.hand.push(gameState.deck.pop());
+                }
+            });
+
+            logAction(`Starting Round ${gameState.round}! Let the drafts begin.`, "info");
+            window.updateUI();
+        };
+
+        function checkHandLimit(playerIndex) {
+            const player = gameState.players[playerIndex];
+            if (player.hand.length > 7) {
+                if (player.isHuman && player.id === myUserId) {
+                    gameState.phase = 'discard_overflow';
+                    window.updateUI();
+                } else {
+                    const dropIndex = Math.floor(Math.random() * player.hand.length);
+                    const dropped = player.hand.splice(dropIndex, 1)[0];
+                    gameState.discardPile.push(dropped);
+                    logAction(`${player.name} discarded ${dropped.text} due to 7-card limit.`, "warning");
+                }
+            }
+        }
+
+        window.handleDiscardOverflow = async function(index) {
+            const playerIndex = gameState.players.findIndex(p => p.id === myUserId);
+            const player = gameState.players[playerIndex];
+            
+            if (player && player.hand.length > 7) {
+                const dropped = player.hand.splice(index, 1)[0];
+                gameState.discardPile.push(dropped);
+                
+                if (isOnlineMode) {
+                    const lobbyRef = doc(db, 'artifacts', appId, 'public', 'data', 'lobbies', onlineLobbyId);
+                    await updateDoc(lobbyRef, {
+                        players: gameState.players,
+                        "gameState.discardPile": gameState.discardPile,
+                        "gameState.phase": "action"
+                    });
+                } else {
+                    logAction(`You discarded ${dropped.text} to satisfy hand limits.`, "success");
+                    gameState.phase = 'action';
+                    window.updateUI();
+                }
+                createToast("Discarded successfully down to 7 cards!");
+            }
+        };
+
+        window.resolveActionCard = async function(card, actor, targetPlayer) {
+            logAction(`${actor.name} played **${card.element} Action** targeting ${targetPlayer ? targetPlayer.name : 'All'}.`, "warning");
+            
+            if (card.element === 'Temp') {
+                logAction(`${targetPlayer.name} skips next phase!`, "warning");
+                targetPlayer.isSkipped = true;
+            } 
+            else if (card.element === 'Earth') {
+                if (actor.hand.length > 0) {
+                    const buryIdx = Math.floor(Math.random() * actor.hand.length);
+                    const buried = actor.hand.splice(buryIdx, 1)[0];
+                    gameState.deck.unshift(buried); 
+                    actor.hand.push(gameState.deck.pop()); 
+                    logAction(`${actor.name} buried a card and drew a replacement.`, "info");
+                }
+            } 
+            else if (card.element === 'Vanity') {
+                if (actor.id === myUserId) {
+                    let textList = targetPlayer.hand.map(c => `[${c.text}]`).join(', ');
+                    createToast(`PEEK RESULT on ${targetPlayer.name}: ${textList}`, "info");
+                }
+                logAction(`${actor.name} peeked at ${targetPlayer.name}'s secret cards.`, "info");
+            } 
+            else if (card.element === 'Elec') {
+                const forced = gameState.deck.pop();
+                targetPlayer.hand.push(forced);
+                logAction(`Forced ${targetPlayer.name} to draw a card!`, "warning");
+                checkHandLimit(gameState.players.indexOf(targetPlayer));
+            } 
+            else if (card.element === 'Food') {
+                const d1 = gameState.deck.pop();
+                const d2 = gameState.deck.pop();
+                actor.hand.push(d1);
+                targetPlayer.hand.push(d2);
+                logAction(`${actor.name} feasted. Kept one card, sent the other to ${targetPlayer.name}.`, "info");
+                checkHandLimit(gameState.players.indexOf(actor));
+                checkHandLimit(gameState.players.indexOf(targetPlayer));
+            } 
+            else if (card.element === 'Water') {
+                if (targetPlayer.hand.length > 0) {
+                    targetPlayer.hand.sort((a,b) => b.value - a.value);
+                    const highCard = targetPlayer.hand.shift();
+                    gameState.discardPile.push(highCard);
+                    targetPlayer.hand.push(gameState.deck.pop());
+                    logAction(`${targetPlayer.name}'s highest value number [${highCard.text}] was flushed.`, "warning");
+                }
+            } 
+            else if (card.element === 'Plastic') {
+                const tempHand = [...actor.hand];
+                actor.hand = [...targetPlayer.hand];
+                targetPlayer.hand = tempHand;
+                logAction(`${actor.name} swapped hands with ${targetPlayer.name}!`, "warning");
+                checkHandLimit(gameState.players.indexOf(actor));
+                checkHandLimit(gameState.players.indexOf(targetPlayer));
+            } 
+            else if (card.element === 'Crime') {
+                if (targetPlayer.hand.length > 0) {
+                    const stIndex = Math.floor(Math.random() * targetPlayer.hand.length);
+                    const stolen = targetPlayer.hand.splice(stIndex, 1)[0];
+                    actor.hand.push(stolen);
+                    logAction(`${actor.name} stole a card from ${targetPlayer.name}!`, "error");
+                    checkHandLimit(gameState.players.indexOf(actor));
+                }
+            }
+            else if (card.element === 'Rainbow') {
+                const d = gameState.deck.pop();
+                targetPlayer.hand.push(d);
+                if (targetPlayer.hand.length > 0) {
+                    const stIdx = Math.floor(Math.random() * targetPlayer.hand.length);
+                    actor.hand.push(targetPlayer.hand.splice(stIdx, 1)[0]);
+                }
+                logAction(`RAINBOW MIMIC action: Mimicked Steal + Force Draw against ${targetPlayer.name}!`, "success");
+                checkHandLimit(gameState.players.indexOf(actor));
+                checkHandLimit(gameState.players.indexOf(targetPlayer));
+            }
+
+            const indexInActorHand = actor.hand.findIndex(c => c.id === card.id);
+            if (indexInActorHand !== -1) {
+                actor.hand.splice(indexInActorHand, 1);
+            }
+            gameState.discardPile.push(card);
+
+            if (isOnlineMode) {
+                const lobbyRef = doc(db, 'artifacts', appId, 'public', 'data', 'lobbies', onlineLobbyId);
+                await updateDoc(lobbyRef, {
+                    players: gameState.players,
+                    "gameState.discardPile": gameState.discardPile,
+                    "gameState.deck": gameState.deck
+                });
+            } else {
+                window.updateUI();
+            }
+        };
+
+        window.handleCardSelect = function(index) {
+            const playerIndex = gameState.players.findIndex(p => p.id === myUserId);
+            const player = gameState.players[playerIndex];
+            const card = player.hand[index];
+
+            if (gameState.phase !== 'action') {
+                createToast("Wait for Action Phase to play standard action cards!", "warning");
+                return;
+            }
+
+            if (card.type !== 'action' && card.type !== 'wild') {
+                createToast("Standard Number cards can't be activated. Build pairs/sequences to score in Showdown!", "info");
+                return;
+            }
+
+            const targetRequired = ['Temp', 'Vanity', 'Elec', 'Food', 'Water', 'Plastic', 'Crime', 'Rainbow'].includes(card.element);
+            
+            if (targetRequired) {
+                actionTargetContext = { card: card, actor: player };
+                const container = document.getElementById('target-choices');
+                container.innerHTML = '';
+                
+                gameState.players.forEach(p => {
+                    if (p.id !== myUserId) {
+                        const btn = document.createElement('button');
+                        btn.className = "w-full bg-slate-800 hover:bg-indigo-600 hover:text-white text-left px-4 py-3 rounded-xl border border-slate-700 text-sm font-semibold transition flex items-center justify-between";
+                        btn.innerHTML = `<span>${p.name}</span> <span class="text-xs text-slate-400">Cards: ${p.hand.length}</span>`;
+                        btn.onclick = async () => {
+                            await window.resolveActionCard(actionTargetContext.card, actionTargetContext.actor, p);
+                            document.getElementById('target-modal').classList.add('hidden');
+                            actionTargetContext = null;
+                            window.advancePhase();
+                        };
+                        container.appendChild(btn);
+                    }
+                });
+                
+                document.getElementById('target-modal').classList.remove('hidden');
+            } else {
+                window.resolveActionCard(card, player, null);
+                window.advancePhase();
+            }
+        };
+
+        window.cancelTargetSelection = function() {
+            document.getElementById('target-modal').classList.add('hidden');
+            actionTargetContext = null;
+        };
+
+        window.executePlayerDraft = async function(choice) {
+            if (gameState.phase !== 'draft' || !gameState.drawnCard) return;
+
+            const playerIndex = gameState.players.findIndex(p => p.id === myUserId);
+            const player = gameState.players[playerIndex];
+
+            if (choice === 'keep') {
+                player.hand.push(gameState.drawnCard);
+                const drawnC = gameState.drawnCard;
+                gameState.drawnCard = null;
+                
+                if (isOnlineMode) {
+                    const lobbyRef = doc(db, 'artifacts', appId, 'public', 'data', 'lobbies', onlineLobbyId);
+                    gameState.phase = 'action';
+                    await updateDoc(lobbyRef, {
+                        players: gameState.players,
+                        "gameState.drawnCard": null,
+                        "gameState.phase": "action",
+                        logs: [...gameState.players.map(p => p.id === myUserId ? `${p.name} chose to KEEP` : null).filter(Boolean)]
+                    });
+                    checkHandLimit(playerIndex);
+                } else {
+                    logAction(`You chose to KEEP the drawn card.`, "success");
+                    checkHandLimit(playerIndex);
+                    gameState.phase = 'action';
+                    window.updateUI();
+                }
+            } else if (choice === 'send') {
+                const container = document.getElementById('stage-body');
+                container.innerHTML = `
+                    <div class="text-center max-w-sm">
+                        <p class="text-xs font-bold uppercase tracking-widest text-indigo-400 mb-2">Send Your Card</p>
+                        <h4 class="text-sm font-semibold text-slate-300 mb-4">Choose which player is forced to accept this card:</h4>
+                        <div class="space-y-2">
+                            ${gameState.players.map((p, idx) => {
+                                if (p.id === myUserId) return '';
+                                return `
+                                    <button onclick="window.sendDraftedCardTo(${idx})" class="w-full bg-slate-800 hover:bg-rose-900 border border-slate-700 hover:border-rose-700 text-white font-bold py-3 px-4 rounded-xl transition flex items-center justify-between">
+                                        <span>${p.name}</span>
+                                        <span class="text-xs bg-slate-950 px-2 py-0.5 rounded-full text-slate-400">Cards: ${p.hand.length}</span>
+                                    </button>
+                                `;
+                            }).join('')}
+                        </div>
+                    </div>
+                `;
+            }
+        };
+
+        window.startDraftSwitch = function() {
+            gameState.phase = 'draft_switch';
+            window.updateUI();
+        };
+
+        window.cancelDraftSwitch = function() {
+            gameState.phase = 'draft';
+            window.updateUI();
+        };
+
+        window.executeDraftSwitch = async function(cardIndex) {
+            const playerIndex = gameState.players.findIndex(p => p.id === myUserId);
+            const player = gameState.players[playerIndex];
+            
+            if (!player || !gameState.drawnCard) return;
+
+            // Send the discarded card from hand to the pile
+            const discardedCard = player.hand.splice(cardIndex, 1)[0];
+            gameState.discardPile.push(discardedCard);
+            
+            // Add the drawn card into the hand
+            player.hand.push(gameState.drawnCard);
+            const replacedWith = gameState.drawnCard;
+            gameState.drawnCard = null;
+            
+            logAction(`You swapped [${discardedCard.text}] out for [${replacedWith.text}].`, "success");
+            createToast(`Replaced ${discardedCard.text} with ${replacedWith.text}!`, "success");
+            
+            gameState.phase = 'action';
+            
+            if (isOnlineMode) {
+                const lobbyRef = doc(db, 'artifacts', appId, 'public', 'data', 'lobbies', onlineLobbyId);
+                await updateDoc(lobbyRef, {
+                    players: gameState.players,
+                    "gameState.drawnCard": null,
+                    "gameState.phase": "action",
+                    "gameState.discardPile": gameState.discardPile,
+                    logs: [`${player.name} swapped a card in hand to satisfy hand limits.`]
+                });
+            } else {
+                window.updateUI();
+            }
+        };
+
+        window.sendDraftedCardTo = async function(playerIndex) {
+            const recipient = gameState.players[playerIndex];
+            recipient.hand.push(gameState.drawnCard);
+            const cardName = gameState.drawnCard.text;
+            gameState.drawnCard = null;
+
+            if (isOnlineMode) {
+                const lobbyRef = doc(db, 'artifacts', appId, 'public', 'data', 'lobbies', onlineLobbyId);
+                await updateDoc(lobbyRef, {
+                    players: gameState.players,
+                    "gameState.drawnCard": null,
+                    "gameState.phase": "action",
+                    logs: [`${gameState.players.find(p => p.id === myUserId).name} SENT card face-down to ${recipient.name}`]
+                });
+                checkHandLimit(playerIndex);
+            } else {
+                logAction(`You SENT your drawn card to ${recipient.name}.`, "warning");
+                checkHandLimit(playerIndex);
+                gameState.phase = 'action';
+                window.updateUI();
+            }
+        };
+
+        window.advancePhase = async function() {
+            if (gameState.phase === 'action') {
+                const bots = gameState.players.filter(p => !p.isHuman);
+                
+                bots.forEach((bot) => {
+                    const botIdx = gameState.players.findIndex(p => p.id === bot.id);
+                    if (bot.isSkipped) {
+                        logAction(`${bot.name} is SKIPPED this phase!`, "warning");
+                        bot.isSkipped = false;
+                        return;
+                    }
+
+                    const drawn = gameState.deck.pop();
+                    const keepChoice = Math.random() > 0.45;
+                    
+                    if (keepChoice) {
+                        bot.hand.push(drawn);
+                        logAction(`${bot.name} chose to KEEP.`, "info");
+                        checkHandLimit(botIdx);
+                    } else {
+                        const possibleRecipients = gameState.players.filter(p => p.id !== bot.id);
+                        const randomRecipient = possibleRecipients[Math.floor(Math.random() * possibleRecipients.length)];
+                        const recipientIdx = gameState.players.findIndex(p => p.id === randomRecipient.id);
+                        
+                        randomRecipient.hand.push(drawn);
+                        logAction(`${bot.name} SENT a card face-down to ${randomRecipient.name}.`, "info");
+                        checkHandLimit(recipientIdx);
+                    }
+
+                    const botActions = bot.hand.filter(c => c.type === 'action' || c.type === 'wild');
+                    if (botActions.length > 0 && Math.random() < 0.35) {
+                        const targetOpponent = gameState.players[Math.floor(Math.random() * gameState.players.length)];
+                        if (targetOpponent.id !== bot.id) {
+                            window.resolveActionCard(botActions[0], bot, targetOpponent);
+                        }
+                    }
+                });
+
+                if (gameState.interval < 5) {
+                    gameState.interval++;
+                    gameState.phase = 'draft';
+                    
+                    if (isOnlineMode) {
+                        const lobbyRef = doc(db, 'artifacts', appId, 'public', 'data', 'lobbies', onlineLobbyId);
+                        await updateDoc(lobbyRef, {
+                            "gameState.interval": gameState.interval,
+                            "gameState.phase": "draft",
+                            "gameState.deck": gameState.deck,
+                            players: gameState.players
+                        });
+                    } else {
+                        logAction(`Interval ${gameState.interval} begins! Draw phase open.`, "info");
+                        window.updateUI();
+                    }
+                } else {
+                    gameState.phase = 'showdown';
+                    gameState.selectedShowdownCards = [];
+                    
+                    if (isOnlineMode) {
+                        const lobbyRef = doc(db, 'artifacts', appId, 'public', 'data', 'lobbies', onlineLobbyId);
+                        await updateDoc(lobbyRef, {
+                            "gameState.phase": "showdown",
+                            players: gameState.players
+                        });
+                    } else {
+                        logAction(`Interval 5 Completed! SHOWDOWN STAGE BEGINS.`, "warning");
+                        window.updateUI();
+                    }
+                }
+            }
+        };
+
+        window.toggleShowdownCard = function(index) {
+            const pos = gameState.selectedShowdownCards.indexOf(index);
+            if (pos !== -1) {
+                gameState.selectedShowdownCards.splice(pos, 1);
+            } else {
+                if (gameState.selectedShowdownCards.length >= 5) {
+                    createToast("You can only choose exactly 5 cards for your Poker score hand!", "warning");
+                    return;
+                }
+                gameState.selectedShowdownCards.push(index);
+            }
+            window.updateUI();
+        };
+
+        window.submitShowdownSelection = async function() {
+            if (gameState.selectedShowdownCards.length !== 5) {
+                createToast("You must select exactly 5 cards to show!", "error");
+                return;
+            }
+
+            const humanIdx = gameState.players.findIndex(p => p.id === myUserId);
+            const human = gameState.players[humanIdx];
+            const chosenCards = gameState.selectedShowdownCards.map(idx => human.hand[idx]);
+            const unchosenCards = human.hand.filter((c, idx) => !gameState.selectedShowdownCards.includes(idx));
+
+            const humanResult = evaluateShowdownScores(chosenCards);
+            human.score += humanResult.points;
+            logAction(`You presented [${humanResult.handName}] scoring +${humanResult.points} points!`, "success");
+
+            const bots = gameState.players.filter(p => !p.isHuman);
+            bots.forEach(bot => {
+                const bIdx = gameState.players.findIndex(p => p.id === bot.id);
+                let botHand = [...bot.hand];
+                let botChosen = botHand.slice(0, 5);
+                let botRemaining = botHand.slice(5);
+
+                const botResult = evaluateShowdownScores(botChosen);
+                bot.score += botResult.points;
+                logAction(`${bot.name} presented [${botResult.handName}] scoring +${botResult.points} points!`, "info");
+                
+                bot.hand = botRemaining.slice(0, 2);
+            });
+
+            human.hand = unchosenCards.slice(0, 2);
+
+            let winnerDeclared = null;
+            gameState.players.forEach(p => {
+                if (p.score >= 50) {
+                    winnerDeclared = p;
+                }
+            });
+
+            if (winnerDeclared) {
+                gameState.phase = 'ended';
+            } else {
+                gameState.phase = 'round_transition';
+            }
+
+            if (isOnlineMode) {
+                const lobbyRef = doc(db, 'artifacts', appId, 'public', 'data', 'lobbies', onlineLobbyId);
+                await updateDoc(lobbyRef, {
+                    players: gameState.players,
+                    "gameState.phase": gameState.phase
+                });
+            } else {
+                window.updateUI();
+            }
+        };
+
+        window.updateUI = function() {
+            const scoreboard = document.getElementById('player-scoreboard');
+            if (!scoreboard) return;
+            scoreboard.innerHTML = '';
+            
+            gameState.players.forEach((p, idx) => {
+                const isHuman = p.isHuman;
+                let handDisplayMarkup = '';
+                
+                if (isHuman || gameState.cheatMode || p.id === myUserId) {
+                    handDisplayMarkup = p.hand.map(c => `
+                        <span class="inline-block px-1.5 py-0.5 rounded text-[9px] bg-slate-800 text-slate-300 font-bold border border-slate-700">
+                            ${c.element.substring(0,3)} ${c.value || '★'}
+                        </span>
+                    `).join(' ');
+                } else {
+                    handDisplayMarkup = `
+                        <span class="text-[10px] text-indigo-400 font-bold">
+                            <i class="fa-solid fa-lock mr-1 text-indigo-500/70"></i> ${p.hand.length} Secret Cards
+                        </span>
+                    `;
+                }
+
+                scoreboard.innerHTML += `
+                    <div class="p-3 bg-slate-800/50 rounded-xl border ${p.id === myUserId ? 'border-violet-500/50 bg-violet-950/10' : 'border-slate-800'} flex items-center justify-between">
+                        <div>
+                            <div class="flex items-center space-x-1.5">
+                                <span class="h-2 w-2 rounded-full ${p.id === myUserId ? 'bg-violet-400' : 'bg-slate-400'}"></span>
+                                <span class="text-sm font-bold text-slate-200">${p.name}</span>
+                            </div>
+                            <div class="mt-1.5 flex flex-wrap gap-1">
+                                ${handDisplayMarkup}
+                            </div>
+                        </div>
+                        <div class="text-right">
+                            <div class="text-lg font-black text-amber-400">${p.score}</div>
+                            <div class="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Points</div>
+                        </div>
+                    </div>
+                `;
+            });
+
+            document.getElementById('display-round').textContent = `Round ${gameState.round}`;
+            document.getElementById('display-interval').textContent = `Interval ${gameState.interval}/5`;
+            document.getElementById('deck-count').textContent = gameState.deck.length;
+
+            for (let i = 1; i <= 5; i++) {
+                const bead = document.getElementById(`bead-${i}`);
+                if (!bead) continue;
+                if (i < gameState.interval) {
+                    bead.className = "h-2.5 flex-1 rounded-full bg-indigo-600 border border-indigo-500 shadow-md shadow-indigo-600/20";
+                } else if (i === gameState.interval) {
+                    bead.className = "h-2.5 flex-1 rounded-full bg-emerald-500 border border-emerald-400 shadow-md shadow-emerald-500/20 animate-pulse";
+                } else {
+                    bead.className = "h-2.5 flex-1 rounded-full bg-slate-800 border border-slate-700";
+                }
+            }
+
+            const stageBadge = document.getElementById('stage-badge');
+            const stageTitle = document.getElementById('stage-title');
+            const stageBody = document.getElementById('stage-body');
+
+            if (gameState.phase === 'draft') {
+                stageBadge.className = "bg-violet-950 text-violet-400 border border-violet-800 text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full";
+                stageBadge.textContent = "Step 1: Draft Choice";
+                stageTitle.textContent = "Draw a card from the deck and choose your action.";
+
+                if (!gameState.drawnCard) {
+                    stageBody.innerHTML = `
+                        <div class="text-center py-6">
+                            <button onclick="window.drawCardForDraft()" class="bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white font-bold text-lg px-8 py-4 rounded-2xl shadow-xl hover:shadow-indigo-500/30 transition transform hover:-translate-y-0.5 active:translate-y-0 flex items-center space-x-3 mx-auto">
+                                <i class="fa-solid fa-cloud-arrow-down text-xl"></i>
+                                <span>Draw Next Card</span>
+                            </button>
+                            <p class="text-xs text-slate-400 mt-3">Click to draw your interval secret draft card.</p>
+                        </div>
+                    `;
+                } else {
+                    const humanIndex = gameState.players.findIndex(p => p.id === myUserId);
+                    const humanPlayer = gameState.players[humanIndex];
+                    const isHandFull = humanPlayer && humanPlayer.hand.length >= 7;
+
+                    let keepActionBtn = '';
+                    if (isHandFull) {
+                        keepActionBtn = `
+                            <button onclick="window.startDraftSwitch()" class="w-full bg-amber-600 hover:bg-amber-500 border border-amber-400 text-white font-bold py-3.5 px-4 rounded-xl transition flex items-center justify-center space-x-2 shadow-lg shadow-amber-600/10">
+                                <i class="fa-solid fa-right-left"></i>
+                                <span>SWITCH (Replace a Card)</span>
+                            </button>
+                        `;
+                    } else {
+                        keepActionBtn = `
+                            <button onclick="window.executePlayerDraft('keep')" class="w-full bg-indigo-600 hover:bg-indigo-500 border border-indigo-400 text-white font-bold py-3.5 px-4 rounded-xl transition flex items-center justify-center space-x-2 shadow-lg shadow-indigo-600/10">
+                                <i class="fa-solid fa-circle-down"></i>
+                                <span>KEEP (Tuck in Hand)</span>
+                            </button>
+                        `;
+                    }
+
+                    stageBody.innerHTML = `
+                        <div class="flex flex-col md:flex-row items-center justify-center gap-8 py-4 max-w-lg w-full">
+                            <div class="flex flex-col items-center">
+                                <p class="text-[10px] uppercase font-bold text-indigo-400 mb-2">You Drew</p>
+                                ${getCardMarkup(gameState.drawnCard, -1, false, "shadow-2xl border-2 border-indigo-500 scale-105")}
+                            </div>
+                            <div class="flex flex-col gap-3 w-full max-w-xs">
+                                ${keepActionBtn}
+                                <button onclick="window.executePlayerDraft('send')" class="w-full bg-slate-800 hover:bg-slate-700 border border-slate-700 hover:border-slate-500 text-slate-100 font-bold py-3.5 px-4 rounded-xl transition flex items-center justify-center space-x-2">
+                                    <i class="fa-solid fa-paper-plane"></i>
+                                    <span>SEND to Competitor</span>
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                }
+            } 
+            else if (gameState.phase === 'draft_switch') {
+                stageBadge.className = "bg-amber-950 text-amber-400 border border-amber-800 text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full";
+                stageBadge.textContent = "Draft Option: Swap";
+                stageTitle.textContent = "Swap out one card in your hand to make room.";
+
+                stageBody.innerHTML = `
+                    <div class="flex flex-col items-center justify-center text-center max-w-sm py-2">
+                        <div class="mb-3">
+                            <p class="text-[10px] uppercase font-bold text-amber-400 mb-1.5">New Drafted Card</p>
+                            ${getCardMarkup(gameState.drawnCard, -1, false, "shadow-2xl border-2 border-amber-500 scale-105 mx-auto")}
+                        </div>
+                        <p class="text-xs text-slate-300 mb-4">Your hand is full. Click any card in your hand below to discard it and put this new card in its place.</p>
+                        <button onclick="window.cancelDraftSwitch()" class="bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-slate-200 border border-slate-700 font-bold py-2 px-6 rounded-xl transition text-xs">
+                            Cancel & Back
+                        </button>
+                    </div>
+                `;
+            }
+            else if (gameState.phase === 'action') {
+                stageBadge.className = "bg-emerald-950 text-emerald-400 border border-emerald-800 text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full";
+                stageBadge.textContent = "Step 2: Play Action";
+                stageTitle.textContent = "Play an Action card from your hand or click PASS.";
+
+                stageBody.innerHTML = `
+                    <div class="text-center max-w-sm">
+                        <div class="mx-auto w-14 h-14 bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 rounded-full flex items-center justify-center text-2xl mb-4">
+                            <i class="fa-solid fa-wand-magic-sparkles"></i>
+                        </div>
+                        <h4 class="text-base font-extrabold text-slate-100 mb-2">Unleash Card Magic</h4>
+                        <p class="text-xs text-slate-400 mb-6">Select any Action Card from your hand below to launch a sabotage play, or PASS to lock in this interval.</p>
+                        <button onclick="window.advancePhase()" class="bg-slate-800 hover:bg-slate-700 text-white border border-slate-700 font-bold py-3 px-8 rounded-xl transition">
+                            PASS (No Action Played)
+                        </button>
+                    </div>
+                `;
+            } 
+            else if (gameState.phase === 'showdown') {
+                stageBadge.className = "bg-rose-950 text-rose-400 border border-rose-800 text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full";
+                stageBadge.textContent = "Showdown Phase";
+                stageTitle.textContent = "CHOOSE EXACTLY 5 CARDS TO PRESENT.";
+
+                let selectedCount = gameState.selectedShowdownCards.length;
+                let currentScoreCombo = "No combo build";
+                
+                if (selectedCount === 5) {
+                    const human = gameState.players.find(p => p.id === myUserId);
+                    const selectedCards = gameState.selectedShowdownCards.map(idx => human.hand[idx]);
+                    const evalResult = evaluateShowdownScores(selectedCards);
+                    currentScoreCombo = `${evalResult.handName} (+${evalResult.points} points)`;
+                }
+
+                stageBody.innerHTML = `
+                    <div class="text-center max-w-md">
+                        <div class="mx-auto w-12 h-12 bg-rose-500/10 text-rose-400 border border-rose-500/30 rounded-full flex items-center justify-center text-xl mb-3">
+                            <i class="fa-solid fa-trophy"></i>
+                        </div>
+                        <h4 class="text-sm font-bold text-slate-200 mb-1">Presented Combo Build</h4>
+                        <p class="text-xl font-black text-amber-400 mb-4">${currentScoreCombo}</p>
+                        
+                        <div class="flex items-center justify-center space-x-3 mb-6">
+                            <span class="text-xs text-slate-400">Selected Cards:</span>
+                            <span class="bg-rose-950 text-rose-400 border border-rose-800 px-3 py-1 rounded-full font-black text-xs">
+                                ${selectedCount} / 5 Selected
+                            </span>
+                        </div>
+
+                        <button onclick="window.submitShowdownSelection()" class="bg-rose-600 hover:bg-rose-500 text-white font-bold px-8 py-3.5 rounded-xl border border-rose-400 shadow-lg shadow-rose-600/20 transition ${selectedCount !== 5 ? 'opacity-50 cursor-not-allowed' : ''}">
+                            Submit Scoring Combo
+                        </button>
+                    </div>
+                `;
+            } 
+            else if (gameState.phase === 'round_transition') {
+                stageBadge.className = "bg-indigo-950 text-indigo-400 border border-indigo-800 text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full";
+                stageBadge.textContent = "Round Transition";
+                stageTitle.textContent = "Prepare cards for the next Round.";
+
+                stageBody.innerHTML = `
+                    <div class="text-center max-w-md">
+                        <div class="mx-auto w-14 h-14 bg-indigo-500/15 border border-indigo-500/30 text-indigo-400 rounded-full flex items-center justify-center text-2xl mb-4">
+                            <i class="fa-solid fa-box-archive"></i>
+                        </div>
+                        <h4 class="text-base font-extrabold text-slate-100 mb-2">Round ${gameState.round} Completed</h4>
+                        <p class="text-xs text-slate-400 mb-6">Unpresented cards left in your hand (up to 2) have been safely archived to carry over into the next round!</p>
+                        <button onclick="window.startNextRound()" class="bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white font-bold py-3 px-8 rounded-xl transition shadow-xl shadow-indigo-600/10">
+                            Begin Round ${gameState.round + 1}
+                        </button>
+                    </div>
+                `;
+            } 
+            else if (gameState.phase === 'ended') {
+                stageBadge.className = "bg-amber-950 text-amber-400 border border-amber-800 text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full";
+                stageBadge.textContent = "Game Complete";
+                stageTitle.textContent = "Session Finished!";
+
+                const sorted = [...gameState.players].sort((a,b) => b.score - a.score);
+                const winner = sorted[0];
+
+                stageBody.innerHTML = `
+                    <div class="text-center max-w-md">
+                        <div class="mx-auto w-16 h-16 bg-amber-500/10 text-amber-400 border border-amber-500/30 rounded-full flex items-center justify-center text-3xl mb-4">
+                            <i class="fa-solid fa-crown"></i>
+                        </div>
+                        <h4 class="text-xl font-extrabold text-slate-100 mb-1">CONGRATULATIONS ${winner.name}!</h4>
+                        
+                        <div class="space-y-2 mb-6">
+                            ${sorted.map((p, idx) => `
+                                <div class="p-3 bg-slate-950/60 border border-slate-800 rounded-xl flex items-center justify-between">
+                                    <span class="text-sm font-bold text-slate-300">#${idx + 1} ${p.name}</span>
+                                    <span class="font-extrabold text-amber-400">${p.score} pts</span>
+                                </div>
+                            `).join('')}
+                        </div>
+
+                        <button onclick="window.resetFullGame()" class="bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3.5 px-8 rounded-xl transition shadow-lg shadow-indigo-600/20">
+                            Play Another Match
+                        </button>
+                    </div>
+                `;
+            }
+
+            const handContainer = document.getElementById('player-hand');
+            const handCountLabel = document.getElementById('hand-count');
+            handContainer.innerHTML = '';
+
+            const humanPlayer = gameState.players.find(p => p.id === myUserId);
+            if (humanPlayer) {
+                handCountLabel.textContent = humanPlayer.hand.length;
+
+                if (humanPlayer.hand.length === 0) {
+                    handContainer.innerHTML = `
+                        <div class="text-center py-6 text-slate-500">
+                            <i class="fa-solid fa-hand text-2xl mb-2"></i>
+                            <p class="text-xs">Your hand is currently empty.</p>
+                        </div>
+                    `;
+                } else {
+                    humanPlayer.hand.forEach((card, idx) => {
+                        let customClasses = '';
+                        if (gameState.phase === 'showdown') {
+                            const isChosen = gameState.selectedShowdownCards.includes(idx);
+                            customClasses = isChosen ? 'border-2 border-rose-500 scale-105 shadow-rose-600/20' : 'opacity-60 border-slate-800 hover:opacity-100';
+                            
+                            handContainer.innerHTML += `
+                                <div onclick="window.toggleShowdownCard(${idx})" class="cursor-pointer">
+                                    ${getCardMarkup(card, -1, false, customClasses)}
+                                </div>
+                            `;
+                        } else if (gameState.phase === 'draft_switch') {
+                            customClasses = 'border-2 border-amber-500/60 hover:border-amber-400 hover:scale-105 animate-pulse';
+                            
+                            handContainer.innerHTML += `
+                                <div onclick="window.executeDraftSwitch(${idx})" class="cursor-pointer">
+                                    ${getCardMarkup(card, -1, false, customClasses)}
+                                </div>
+                            `;
+                        } else {
+                            handContainer.innerHTML += getCardMarkup(card, idx, true, customClasses);
+                        }
+                    });
+                }
+            }
+
+            const overflowModal = document.getElementById('discard-overflow-modal');
+            if (gameState.phase === 'discard_overflow' && humanPlayer && humanPlayer.hand.length > 7) {
+                document.getElementById('overflow-count').textContent = humanPlayer.hand.length;
+                const overflowChoices = document.getElementById('overflow-hand-choices');
+                overflowChoices.innerHTML = '';
+                
+                humanPlayer.hand.forEach((card, idx) => {
+                    overflowChoices.innerHTML += `
+                        <div onclick="window.handleDiscardOverflow(${idx})" class="cursor-pointer">
+                            ${getCardMarkup(card, -1, false, "border-2 border-slate-700 hover:border-amber-500 hover:scale-105")}
+                        </div>
+                    `;
+                });
+                overflowModal.classList.remove('hidden');
+            } else {
+                overflowModal.classList.add('hidden');
+            }
+        };
+
+        window.drawCardForDraft = async function() {
+            if (gameState.phase !== 'draft' || gameState.drawnCard) return;
+
+            if (gameState.deck.length === 0) {
+                logAction("Deck exhausted! Shuffling dynamic deck.", "warning");
+                gameState.deck = buildDeck();
+            }
+
+            const card = gameState.deck.pop();
+            gameState.drawnCard = card;
+
+            if (isOnlineMode) {
+                const lobbyRef = doc(db, 'artifacts', appId, 'public', 'data', 'lobbies', onlineLobbyId);
+                await updateDoc(lobbyRef, {
+                    "gameState.drawnCard": card,
+                    "gameState.deck": gameState.deck
+                });
+            } else {
+                window.updateUI();
+            }
+        };
+
+        window.onload = function() {
+            window.resetFullGame();
+        };
+    </script>
+</body>
+</html>
